@@ -1,0 +1,488 @@
+{
+  "schema_version": "1.0.0",
+  "type": "app",
+  "version": "2.0.0",
+  "app": {
+    "id": "app_prenotazione_uffici",
+    "name": "Prenotazione Uffici",
+    "version": "1.0.0",
+    "description": "Sistema di prenotazione uffici con gestione slot orari",
+    "icon": "Building",
+    "url": "/prenotazione-uffici"
+  },
+  "budibase": { "version": "2.0.0" },
+  "features": {
+    "componentValidation": true,
+    "disableUserMetadata": false
+  },
+  "theme": "spectrum--light",
+  "customTheme": {
+    "primaryColor": "#2196F3",
+    "primaryColorHover": "#1976D2",
+    "buttonBorderRadius": "8px",
+    "navBackground": "#1565C0",
+    "navTextColor": "#ffffff"
+  },
+  "navigation": {
+    "navigation": "Top",
+    "links": [
+      { "text": "Dashboard", "url": "/dashboard" },
+      { "text": "Nuova Prenotazione", "url": "/nuova-prenotazione" }
+    ]
+  },
+  "datasources": {
+    "datasource_internal_bb_default": {
+      "_id": "datasource_internal_bb_default",
+      "type": "budibase",
+      "name": "Budibase DB"
+    }
+  },
+  "tables": {
+    "ta_uffici": {
+      "_id": "ta_uffici",
+      "name": "uffici",
+      "sourceId": "datasource_internal_bb_default",
+      "sourceType": "internal",
+      "primaryDisplay": "nome",
+      "schema": {
+        "id": { "name": "id", "type": "number", "autocolumn": true, "subtype": "autoID" },
+        "nome": { "name": "nome", "type": "string", "constraints": { "presence": { "allowEmpty": false } } },
+        "piano": { "name": "piano", "type": "string" },
+        "capienza": { "name": "capienza", "type": "number", "default": 1 },
+        "descrizione": { "name": "descrizione", "type": "longform" },
+        "attivo": { "name": "attivo", "type": "boolean", "default": true },
+        "prenotazioni": { "name": "prenotazioni", "type": "link", "tableId": "ta_prenotazioni", "relationshipType": "one-to-many", "fieldName": "ufficio" },
+        "created_at": { "name": "created_at", "type": "datetime", "autocolumn": true, "subtype": "createdAt" }
+      }
+    },
+    "ta_slot_orari": {
+      "_id": "ta_slot_orari",
+      "name": "slot_orari",
+      "sourceId": "datasource_internal_bb_default",
+      "sourceType": "internal",
+      "primaryDisplay": "descrizione",
+      "schema": {
+        "id": { "name": "id", "type": "number", "autocolumn": true, "subtype": "autoID" },
+        "ora_inizio": { "name": "ora_inizio", "type": "string", "constraints": { "presence": { "allowEmpty": false } } },
+        "ora_fine": { "name": "ora_fine", "type": "string", "constraints": { "presence": { "allowEmpty": false } } },
+        "descrizione": { "name": "descrizione", "type": "string" },
+        "attivo": { "name": "attivo", "type": "boolean", "default": true },
+        "prenotazioni": { "name": "prenotazioni", "type": "link", "tableId": "ta_prenotazioni", "relationshipType": "one-to-many", "fieldName": "slot" },
+        "created_at": { "name": "created_at", "type": "datetime", "autocolumn": true, "subtype": "createdAt" }
+      }
+    },
+    "ta_prenotazioni": {
+      "_id": "ta_prenotazioni",
+      "name": "prenotazioni",
+      "sourceId": "datasource_internal_bb_default",
+      "sourceType": "internal",
+      "primaryDisplay": "data_prenotazione",
+      "schema": {
+        "id": { "name": "id", "type": "number", "autocolumn": true, "subtype": "autoID" },
+        "ufficio": { "name": "ufficio", "type": "link", "tableId": "ta_uffici", "relationshipType": "many-to-one", "fieldName": "prenotazioni" },
+        "slot": { "name": "slot", "type": "link", "tableId": "ta_slot_orari", "relationshipType": "many-to-one", "fieldName": "prenotazioni" },
+        "data_prenotazione": { "name": "data_prenotazione", "type": "datetime", "constraints": { "presence": { "allowEmpty": false } } },
+        "utente": { "name": "utente", "type": "bb_reference_single", "subtype": "user" },
+        "stato": { "name": "stato", "type": "options", "constraints": { "inclusion": ["confermata", "cancellata"] }, "default": "confermata" },
+        "note": { "name": "note", "type": "longform" },
+        "created_at": { "name": "created_at", "type": "datetime", "autocolumn": true, "subtype": "createdAt" }
+      }
+    }
+  },
+  "screens": {
+    "screen_dashboard": {
+      "_id": "screen_dashboard",
+      "routing": {
+        "route": "/dashboard",
+        "roleId": "BASIC",
+        "homeScreen": true
+      },
+      "props": {
+        "_id": "root_dashboard",
+        "_component": "@budibase/standard-components/container",
+        "_styles": { "normal": { "padding": "24px", "gap": "24px", "display": "flex", "flexDirection": "column" } },
+        "_children": [
+          {
+            "_id": "heading_dashboard",
+            "_component": "@budibase/standard-components/heading",
+            "text": "🏢 Prenotazione Uffici",
+            "size": "L"
+          },
+          {
+            "_id": "form_filtri",
+            "_component": "@budibase/standard-components/container",
+            "_styles": { "normal": { "display": "flex", "gap": "16px", "flexWrap": "wrap" } },
+            "_children": [
+              {
+                "_id": "datepicker_data",
+                "_component": "@budibase/standard-components/datepicker",
+                "field": "dataSelezionata",
+                "label": "Seleziona Data",
+                "enableTime": false,
+                "onChange": [
+                  { "##eventHandlerType": "Update State", "parameters": { "key": "dataSelezionata", "value": "{{ eventContext.value }}" } },
+                  { "##eventHandlerType": "Refresh Data Provider" }
+                ]
+              },
+              {
+                "_id": "select_ufficio",
+                "_component": "@budibase/standard-components/optionspicker",
+                "field": "ufficioSelezionato",
+                "label": "Seleziona Ufficio",
+                "dataProvider": "{{ dataprovider_uffici }}",
+                "labelColumn": "nome",
+                "valueColumn": "_id",
+                "onChange": [
+                  { "##eventHandlerType": "Update State", "parameters": { "key": "ufficioSelezionato", "value": "{{ eventContext.value }}" } },
+                  { "##eventHandlerType": "Refresh Data Provider" }
+                ]
+              }
+            ]
+          },
+          {
+            "_id": "dataprovider_uffici",
+            "_component": "@budibase/standard-components/dataprovider",
+            "dataSource": { "tableId": "ta_uffici" },
+            "filter": { "field": "attivo", "operator": "equal", "value": true }
+          },
+          {
+            "_id": "section_slot",
+            "_component": "@budibase/standard-components/container",
+            "_children": [
+              {
+                "_id": "heading_slot",
+                "_component": "@budibase/standard-components/heading",
+                "text": "Slot Disponibili",
+                "size": "M"
+              },
+              {
+                "_id": "dataprovider_slot",
+                "_component": "@budibase/standard-components/dataprovider",
+                "dataSource": { "tableId": "ta_slot_orari" },
+                "filter": { "field": "attivo", "operator": "equal", "value": true },
+                "sortColumn": "ora_inizio",
+                "sortOrder": "ascending",
+                "_children": [
+                  {
+                    "_id": "repeater_slot",
+                    "_component": "@budibase/standard-components/repeater",
+                    "dataProvider": "{{ dataprovider_slot }}",
+                    "direction": "row",
+                    "hAlign": "left",
+                    "vAlign": "top",
+                    "_styles": { "normal": { "gap": "16px", "flexWrap": "wrap" } },
+                    "_children": [
+                      {
+                        "_id": "card_slot",
+                        "_component": "@budibase/standard-components/container",
+                        "_styles": { "normal": { "padding": "16px", "borderRadius": "8px", "minWidth": "200px", "boxShadow": "0 2px 4px rgba(0,0,0,0.1)" } },
+                        "_children": [
+                          {
+                            "_id": "text_orario",
+                            "_component": "@budibase/standard-components/text",
+                            "text": "{{ Repeater.ora_inizio }} - {{ Repeater.ora_fine }}"
+                          },
+                          {
+                            "_id": "text_desc_slot",
+                            "_component": "@budibase/standard-components/text",
+                            "text": "{{ Repeater.descrizione }}",
+                            "_styles": { "normal": { "color": "#666", "fontSize": "14px" } }
+                          },
+                          {
+                            "_id": "btn_prenota",
+                            "_component": "@budibase/standard-components/button",
+                            "text": "Prenota",
+                            "type": "cta",
+                            "onClick": [
+                              {
+                                "##eventHandlerType": "Save Row",
+                                "parameters": {
+                                  "tableId": "ta_prenotazioni",
+                                  "fields": {
+                                    "ufficio": "{{ State.ufficioSelezionato }}",
+                                    "slot": "{{ Repeater._id }}",
+                                    "data_prenotazione": "{{ State.dataSelezionata }}",
+                                    "utente": "{{ Current User._id }}",
+                                    "stato": "confermata"
+                                  }
+                                }
+                              },
+                              { "##eventHandlerType": "Refresh Data Provider" },
+                              { "##eventHandlerType": "Show Notification", "parameters": { "message": "Prenotazione effettuata con successo!", "type": "success" } }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "_id": "section_mie_prenotazioni",
+            "_component": "@budibase/standard-components/container",
+            "_styles": { "normal": { "marginTop": "32px" } },
+            "_children": [
+              {
+                "_id": "heading_mie_pren",
+                "_component": "@budibase/standard-components/heading",
+                "text": "Le Mie Prenotazioni",
+                "size": "M"
+              },
+              {
+                "_id": "dataprovider_mie_prenotazioni",
+                "_component": "@budibase/standard-components/dataprovider",
+                "dataSource": { "tableId": "ta_prenotazioni" },
+                "filter": { "field": "utente", "operator": "equal", "value": "{{ Current User._id }}" },
+                "sortColumn": "data_prenotazione",
+                "sortOrder": "descending",
+                "_children": [
+                  {
+                    "_id": "table_prenotazioni",
+                    "_component": "@budibase/standard-components/table",
+                    "dataProvider": "{{ dataprovider_mie_prenotazioni }}",
+                    "columns": [
+                      { "name": "data_prenotazione", "displayName": "Data" },
+                      { "name": "ufficio", "displayName": "Ufficio" },
+                      { "name": "slot", "displayName": "Slot" },
+                      { "name": "stato", "displayName": "Stato" },
+                      { "name": "note", "displayName": "Note" }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "screen_nuova_prenotazione": {
+      "_id": "screen_nuova_prenotazione",
+      "routing": {
+        "route": "/nuova-prenotazione",
+        "roleId": "BASIC",
+        "homeScreen": false
+      },
+      "props": {
+        "_id": "root_nuova_prenotazione",
+        "_component": "@budibase/standard-components/container",
+        "_styles": { "normal": { "padding": "24px", "maxWidth": "600px", "margin": "0 auto" } },
+        "_children": [
+          {
+            "_id": "heading_nuova",
+            "_component": "@budibase/standard-components/heading",
+            "text": "📝 Nuova Prenotazione",
+            "size": "L"
+          },
+          {
+            "_id": "form_prenotazione",
+            "_component": "@budibase/standard-components/form",
+            "dataSource": { "tableId": "ta_prenotazioni" },
+            "_children": [
+              {
+                "_id": "datepicker_prenotazione",
+                "_component": "@budibase/standard-components/datepicker",
+                "field": "data_prenotazione",
+                "label": "Data Prenotazione",
+                "enableTime": false
+              },
+              {
+                "_id": "dataprovider_uffici_form",
+                "_component": "@budibase/standard-components/dataprovider",
+                "dataSource": { "tableId": "ta_uffici" },
+                "filter": { "field": "attivo", "operator": "equal", "value": true }
+              },
+              {
+                "_id": "relationshipfield_ufficio",
+                "_component": "@budibase/standard-components/relationshipfield",
+                "field": "ufficio",
+                "label": "Ufficio"
+              },
+              {
+                "_id": "dataprovider_slot_form",
+                "_component": "@budibase/standard-components/dataprovider",
+                "dataSource": { "tableId": "ta_slot_orari" },
+                "filter": { "field": "attivo", "operator": "equal", "value": true }
+              },
+              {
+                "_id": "relationshipfield_slot",
+                "_component": "@budibase/standard-components/relationshipfield",
+                "field": "slot",
+                "label": "Slot Orario"
+              },
+              {
+                "_id": "longformfield_note",
+                "_component": "@budibase/standard-components/longformfield",
+                "field": "note",
+                "label": "Note (opzionale)",
+                "placeholder": "Inserisci eventuali note..."
+              },
+              {
+                "_id": "container_buttons",
+                "_component": "@budibase/standard-components/container",
+                "_styles": { "normal": { "display": "flex", "gap": "16px", "marginTop": "24px" } },
+                "_children": [
+                  {
+                    "_id": "btn_conferma",
+                    "_component": "@budibase/standard-components/button",
+                    "text": "Conferma Prenotazione",
+                    "type": "cta",
+                    "onClick": [
+                      {
+                        "##eventHandlerType": "Save Row",
+                        "parameters": {
+                          "tableId": "ta_prenotazioni",
+                          "fields": {
+                            "utente": "{{ Current User._id }}",
+                            "stato": "confermata"
+                          }
+                        }
+                      },
+                      { "##eventHandlerType": "Show Notification", "parameters": { "message": "Prenotazione confermata!", "type": "success" } },
+                      { "##eventHandlerType": "Navigate To", "parameters": { "url": "/dashboard" } }
+                    ]
+                  },
+                  {
+                    "_id": "btn_torna",
+                    "_component": "@budibase/standard-components/button",
+                    "text": "Torna alla Dashboard",
+                    "type": "secondary",
+                    "onClick": [
+                      { "##eventHandlerType": "Navigate To", "parameters": { "url": "/dashboard" } }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "automations": {
+    "auto_verifica_disponibilita": {
+      "_id": "auto_verifica_disponibilita",
+      "name": "Verifica Disponibilità Slot",
+      "definition": {
+        "trigger": {
+          "id": "trigger_row_created",
+          "stepId": "ROW_CREATED",
+          "inputs": { "tableId": "ta_prenotazioni" }
+        },
+        "steps": [
+          {
+            "id": "step_query_existing",
+            "stepId": "QUERY_ROWS",
+            "inputs": {
+              "tableId": "ta_prenotazioni",
+              "filters": {
+                "ufficio": "{{ trigger.row.ufficio }}",
+                "slot": "{{ trigger.row.slot }}",
+                "data_prenotazione": "{{ trigger.row.data_prenotazione }}",
+                "stato": "confermata"
+              }
+            }
+          },
+          {
+            "id": "step_condition",
+            "stepId": "CONDITION",
+            "inputs": {
+              "condition": "{{ steps.step_query_existing.rows.length > 1 }}"
+            },
+            "branches": {
+              "true": [
+                {
+                  "id": "step_delete_duplicate",
+                  "stepId": "DELETE_ROW",
+                  "inputs": {
+                    "tableId": "ta_prenotazioni",
+                    "rowId": "{{ trigger.row._id }}"
+                  }
+                }
+              ],
+              "false": []
+            }
+          }
+        ]
+      }
+    },
+    "auto_notifica_email": {
+      "_id": "auto_notifica_email",
+      "name": "Notifica Email Conferma",
+      "definition": {
+        "trigger": {
+          "id": "trigger_row_created_email",
+          "stepId": "ROW_CREATED",
+          "inputs": { "tableId": "ta_prenotazioni" }
+        },
+        "steps": [
+          {
+            "id": "step_query_ufficio",
+            "stepId": "QUERY_ROWS",
+            "inputs": {
+              "tableId": "ta_uffici",
+              "filters": {
+                "_id": "{{ trigger.row.ufficio }}"
+              }
+            }
+          },
+          {
+            "id": "step_query_slot",
+            "stepId": "QUERY_ROWS",
+            "inputs": {
+              "tableId": "ta_slot_orari",
+              "filters": {
+                "_id": "{{ trigger.row.slot }}"
+              }
+            }
+          },
+          {
+            "id": "step_send_email",
+            "stepId": "SEND_EMAIL_SMTP",
+            "inputs": {
+              "to": "{{ trigger.row.utente.email }}",
+              "subject": "Conferma Prenotazione Ufficio",
+              "contents": "<h2>🏢 Prenotazione Confermata</h2><p><strong>Ufficio:</strong> {{ steps.step_query_ufficio.rows[0].nome }}</p><p><strong>Piano:</strong> {{ steps.step_query_ufficio.rows[0].piano }}</p><p><strong>Data:</strong> {{ trigger.row.data_prenotazione }}</p><p><strong>Orario:</strong> {{ steps.step_query_slot.rows[0].ora_inizio }} - {{ steps.step_query_slot.rows[0].ora_fine }}</p><p>Grazie per aver utilizzato il sistema di prenotazione!</p>"
+            }
+          }
+        ]
+      }
+    }
+  },
+  "roles": {
+    "BASIC": {
+      "_id": "BASIC",
+      "name": "Basic",
+      "inherits": [],
+      "permissionId": "read_only",
+      "permissions": {
+        "ta_uffici": ["read"],
+        "ta_slot_orari": ["read"],
+        "ta_prenotazioni": ["read", "write"]
+      }
+    },
+    "POWER": {
+      "_id": "POWER",
+      "name": "Power",
+      "inherits": ["BASIC"],
+      "permissionId": "power",
+      "permissions": {
+        "ta_uffici": ["read"],
+        "ta_slot_orari": ["read"],
+        "ta_prenotazioni": ["read", "write"]
+      }
+    },
+    "ADMIN": {
+      "_id": "ADMIN",
+      "name": "Admin",
+      "inherits": ["POWER"],
+      "permissionId": "admin",
+      "permissions": {
+        "ta_uffici": ["read", "write", "delete"],
+        "ta_slot_orari": ["read", "write", "delete"],
+        "ta_prenotazioni": ["read", "write", "delete"]
+      }
+    }
+  }
+}
